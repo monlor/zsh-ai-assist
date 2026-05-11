@@ -153,7 +153,7 @@ fisher install MKSG-MugunthKumar/zsh-ai-assist
 git clone https://github.com/MKSG-MugunthKumar/zsh-ai-assist ~/.config/fish/plugins/zsh-ai-assist
 
 # Create symlinks for fish functions
-ln -sf ~/.config/fish/plugins/zsh-ai-assist/functions/ask_claude.fish ~/.config/fish/functions/
+ln -sf ~/.config/fish/plugins/zsh-ai-assist/functions/ask_ai.fish ~/.config/fish/functions/
 ln -sf ~/.config/fish/plugins/zsh-ai-assist/conf.d/zsh_ai_assist.fish ~/.config/fish/conf.d/
 
 # Reload fish
@@ -199,14 +199,14 @@ Create a PKGBUILD file for Arch Linux users to install via `yay` or `pacman`.
 ? compress a directory with tar
 ```
 
-**For fish users**, use the `ask_claude` function:
+**For fish users**, use the `ask_ai` function:
 
 ```fish
-ask_claude flush DNS cache
-ask_claude install docker on ubuntu
-ask_claude find all files larger than 100MB
-ask_claude create a systemd service
-ask_claude compress a directory with tar
+ask_ai flush DNS cache
+ask_ai install docker on ubuntu
+ask_ai find all files larger than 100MB
+ask_ai create a systemd service
+ask_ai compress a directory with tar
 ```
 
 You can also use the `?` abbreviation in fish (note: no space after `?`):
@@ -303,14 +303,14 @@ The plugin:
 
 - **Fisher**: Install via `fisher install MKSG-MugunthKumar/zsh-ai-assist`
 - **Manual**: Copy functions and config files to appropriate fish directories
-- **Functions**: `ask_claude` and `fix_last_command`
+- **Functions**: `ask_ai` and `fix_last_command`
 - **Abbreviations**: `?` and `??` available as shortcuts
 
 ### Function Name Reference
 
 | Action           | zsh  | fish                       |
 | ---------------- | ---- | -------------------------- |
-| Ask for command  | `?`  | `ask_claude` or `?`        |
+| Ask for command  | `?`  | `ask_ai` or `?`        |
 | Fix last command | `??` | `fix_last_command` or `??` |
 
 ## Contributors

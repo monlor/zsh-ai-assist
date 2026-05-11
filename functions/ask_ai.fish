@@ -25,7 +25,7 @@ else
     end
 end
 
-function ask_claude -d "Generate commands using Claude AI or OpenAI"
+function ask_ai -d "Generate commands using Claude AI or OpenAI"
     # Get detailed system information
     set -l os_type ""
     set -l system_detail ""
@@ -74,7 +74,7 @@ function ask_claude -d "Generate commands using Claude AI or OpenAI"
     # Check if arguments were provided
     if test (count $argv) -eq 0
         echo "Error: No command specified"
-        echo "Usage: ask_claude your question here"
+        echo "Usage: ask_ai your question here"
         echo "       fix_last_command - to debug the last failed command"
         echo ""
         echo "Environment variables:"
@@ -109,7 +109,7 @@ function ask_claude -d "Generate commands using Claude AI or OpenAI"
             set os_examples "Examples: apt/yum/dnf install, systemctl, /etc/ configs"
     end
 
-    set -l system_instruction "Generate shell commands for $system_detail for $shell_type only. $os_examples. Use the shell_command tool to provide your response."
+    set -l system_instruction "Generate exactly one shell command for $system_detail for $shell_type only. Return the single best command that directly satisfies the user's request. Do not include examples, alternatives, comments, explanations, blank lines, or multiple commands. $os_examples. Use the shell_command tool to provide your response."
 
     # Build JSON payload and make request based on provider
     set -l response
@@ -203,12 +203,12 @@ function ask_claude -d "Generate commands using Claude AI or OpenAI"
     # Extract command from response
     set -l cmd ""
     if test "$provider" = "openai"
-        set -l args (echo $response | jq -r '.choices[0].message.tool_calls[0].function.arguments // empty' 2>/dev/null)
-        if test -n "$args" -a "$args" != "empty"
-            set cmd (echo $args | jq -r '.command // empty' 2>/dev/null)
+        set cmd (printf '%s' "$response" | jq -r '.choices[0].message.tool_calls[0].function.arguments | fromjson.command // empty' 2>/dev/null)
+        if test -z "$cmd" -o "$cmd" = "null" -o "$cmd" = "empty"
+            set cmd (printf '%s' "$response" | jq -r '.choices[0].message.content // empty' 2>/dev/null)
         end
         if test -z "$cmd" -o "$cmd" = "null" -o "$cmd" = "empty"
-            set cmd (echo $response | jq -r '.choices[0].message.content // empty' 2>/dev/null)
+            set cmd (printf '%s' "$response" | perl -0777 -ne 'if (/(?:"arguments":"\{\\"command\\":\\"|"command"[[:space:]]*:[[:space:]]*")(.*?)(?:\\",\\"os\\"|"[[:space:]]*,[[:space:]]*"os")/s) { $cmd=$1; $cmd=~s/\\n/\n/g; $cmd=~s/\\"/"/g; $cmd=~s/\\\\/\\/g; print $cmd }')
         end
     else
         set cmd (echo $response | jq -r '.content[0].input.command // empty' 2>/dev/null)
@@ -217,6 +217,15 @@ function ask_claude -d "Generate commands using Claude AI or OpenAI"
         end
     end
 
+    if test -z "$cmd" -o "$cmd" = "null" -o "$cmd" = "empty"
+        set_color red
+        echo "Error: Failed to parse API response"
+        set_color normal
+        echo $response
+        return 1
+    end
+
+    set cmd (printf '%s\n' "$cmd" | awk 'NF && $1 !~ /^#/ { print; exit }')
     if test -z "$cmd" -o "$cmd" = "null" -o "$cmd" = "empty"
         set_color red
         echo "Error: Failed to parse API response"
@@ -234,10 +243,10 @@ function fix_last_command -d "Fix the last failed command using Claude AI or Ope
     set -l last_cmd (history | head -n 1)
     set last_cmd (string trim $last_cmd)
 
-    # Skip if the last command was ask_claude or fix_last_command
-    if string match -q "ask_claude*" $last_cmd; or string match -q "fix_last_command*" $last_cmd
+    # Skip if the last command was ask_ai or fix_last_command
+    if string match -q "ask_ai*" $last_cmd; or string match -q "fix_last_command*" $last_cmd
         set_color yellow
-        echo "No previous command to fix (last command was ask_claude or fix_last_command)"
+        echo "No previous command to fix (last command was ask_ai or fix_last_command)"
         set_color normal
         return 1
     end
@@ -254,5 +263,5 @@ function fix_last_command -d "Fix the last failed command using Claude AI or Ope
     set_color normal
 
     set -l fix_prompt "The command '$last_cmd' failed. Please provide a corrected version or alternative approach."
-    ask_claude $fix_prompt
+    ask_ai $fix_prompt
 end

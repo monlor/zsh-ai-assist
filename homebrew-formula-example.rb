@@ -16,7 +16,7 @@ class ZshAiAssist < Formula
     (share/"zsh/site-functions").install "zsh-ai-assist.plugin.zsh"
     
     # Install fish functions
-    (share/"fish/vendor_functions.d").install "functions/ask_claude.fish"
+    (share/"fish/vendor_functions.d").install "functions/ask_ai.fish"
     (share/"fish/vendor_conf.d").install "conf.d/zsh_ai_assist.fish"
     
     # Install documentation
@@ -43,6 +43,6 @@ class ZshAiAssist < Formula
   test do
     # Test that the plugin file exists and is readable
     assert_predicate share/"zsh/site-functions/zsh-ai-assist.plugin.zsh", :exist?
-    assert_predicate share/"fish/vendor_functions.d/ask_claude.fish", :exist?
+    assert_predicate share/"fish/vendor_functions.d/ask_ai.fish", :exist?
   end
 end

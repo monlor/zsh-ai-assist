@@ -15,7 +15,7 @@ else
     : "${ZSH_AI_ASSIST_MODEL:=claude-sonnet-4-20250514}"
 fi
 
-function ask-claude() {
+function ask-ai() {
     # Get detailed system information
     local os_type shell_type target_os system_detail
 
@@ -98,7 +98,7 @@ function ask-claude() {
         os_examples="Examples: apt/yum/dnf install, systemctl, /etc/ configs"
     fi
 
-    local system_instruction="Generate shell commands for $system_detail for $shell_type only. $os_examples. Use the shell_command tool to provide your response."
+    local system_instruction="Generate exactly one shell command for $system_detail for $shell_type only. Return the single best command that directly satisfies the user's request. Do not include examples, alternatives, comments, explanations, blank lines, or multiple commands. $os_examples. Use the shell_command tool to provide your response."
 
     # Build JSON payload and make request based on provider
     local response
@@ -188,12 +188,12 @@ function ask-claude() {
     # Extract command from response
     local cmd=""
     if [[ "$provider" == "openai" ]]; then
-        cmd=$(echo "$response" | jq -r '.choices[0].message.tool_calls[0].function.arguments // empty' 2>/dev/null)
-        if [[ -n "$cmd" && "$cmd" != "empty" ]]; then
-            cmd=$(echo "$cmd" | jq -r '.command // empty' 2>/dev/null)
-        fi
+        cmd=$(echo "$response" | jq -r '.choices[0].message.tool_calls[0].function.arguments | fromjson.command // empty' 2>/dev/null)
         if [[ -z "$cmd" || "$cmd" == "null" || "$cmd" == "empty" ]]; then
             cmd=$(echo "$response" | jq -r '.choices[0].message.content // empty' 2>/dev/null)
+        fi
+        if [[ -z "$cmd" || "$cmd" == "null" || "$cmd" == "empty" ]]; then
+            cmd=$(printf '%s' "$response" | perl -0777 -ne 'if (/(?:"arguments":"\{\\"command\\":\\"|"command"[[:space:]]*:[[:space:]]*")(.*?)(?:\\",\\"os\\"|"[[:space:]]*,[[:space:]]*"os")/s) { $cmd=$1; $cmd=~s/\\n/\n/g; $cmd=~s/\\"/"/g; $cmd=~s/\\\\/\\/g; print $cmd }')
         fi
     else
         cmd=$(echo "$response" | jq -r '.content[0].input.command // empty' 2>/dev/null)
@@ -202,6 +202,13 @@ function ask-claude() {
         fi
     fi
 
+    if [[ -z "$cmd" || "$cmd" == "null" || "$cmd" == "empty" ]]; then
+        echo -e "\033[31mError: Failed to parse API response\033[0m"
+        echo "$response"
+        return 1
+    fi
+
+    cmd=$(printf '%s\n' "$cmd" | awk 'NF && $1 !~ /^#/ { print; exit }')
     if [[ -z "$cmd" || "$cmd" == "null" || "$cmd" == "empty" ]]; then
         echo -e "\033[31mError: Failed to parse API response\033[0m"
         echo "$response"
@@ -232,9 +239,9 @@ function fix-last-command() {
     echo -e "\033[33m🔍 Analyzing failed command:\033[0m $last_cmd"
 
     local fix_prompt="The command '$last_cmd' failed. Please provide a corrected version or alternative approach."
-    ask-claude "$fix_prompt"
+    ask-ai "$fix_prompt"
 }
 
 # Create aliases
-alias "?"="ask-claude"
+alias "?"="ask-ai"
 alias "??"="fix-last-command"
